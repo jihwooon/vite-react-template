@@ -1,0 +1,47 @@
+name: frontend-ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - "*"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        node: ['18', '20', '22']
+        os: [ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: |
+            ${{ runner.os }}-build-${{ hashFiles('frontend/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ hashFiles('frontend/yarn.lock') }}
+      - name: Install Cache Dependencies
+        if: steps.cache.outputs.cache-hit == 'true'
+        run: yarn install --immutable --immutable-cache --check-cache
+      - name: Run Build 
+        run: yarn build
+      - name: Run Test
+        run: yarn test
+      - name: Run Checke Lint 
+        run: yarn lint
